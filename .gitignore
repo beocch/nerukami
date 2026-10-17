@@ -222,3 +222,6 @@ theme/static/css/dist/
 # nerukami installer: standalone Tailwind binary
 .tools/
 .certs/
+# local secrets: .env backups, local admin login
+.env.bak*
+.local-admin.env
