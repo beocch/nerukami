@@ -1,6 +1,12 @@
 """Context processors for sidebar and global template data."""
 
+from django.conf import settings
 from django.db.models import Count, Q
+
+
+def branding(request):
+    """Expose the product name (settings.APP_NAME) as ``app_name``."""
+    return {"app_name": settings.APP_NAME}
 
 
 def sidebar_context(request):

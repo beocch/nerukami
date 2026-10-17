@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n allauth account socialaccount %}
 
-{% block title %}Log in · BrightBean Studio{% endblock %}
+{% block title %}Log in · {{ app_name }}{% endblock %}
 
 {% block auth_content %}
 <style>
@@ -21,14 +21,14 @@
     <!-- Logo & Header -->
     <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-12 h-12 mb-4">
-            <img src="{% static 'img/brightbean-studio-logo.webp' %}" alt="BrightBean Studio logo" class="w-12 h-12 object-contain">
+            <img src="{% static 'img/brightbean-studio-logo.webp' %}" alt="{{ app_name }} logo" class="w-12 h-12 object-contain">
         </div>
-        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #93a240;">BrightBean · Studio</span>
+        <span class="block text-[11px] font-semibold uppercase tracking-widest mb-2" style="color: #93a240;">{{ app_name }}</span>
         <h1 class="text-2xl font-bold tracking-tight" style="color: var(--text-primary);">
             Welcome back
         </h1>
         <p class="text-sm mt-1" style="color: var(--text-secondary);">
-            Log in to BrightBean Studio | Social media scheduling &amp; approvals.
+            Log in to {{ app_name }} | Social media scheduling &amp; approvals.
         </p>
     </div>
 
@@ -126,5 +126,6 @@
         <a href="{{ signup_url }}" class="font-semibold hover:underline" style="color: var(--primary);">Sign up</a>
     </p>
     {% endif %}
+    {% include "partials/_attribution.html" %}
 </div>
 {% endblock %}
