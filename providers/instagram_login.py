@@ -342,6 +342,12 @@ class InstagramLoginProvider(SocialProvider):
             # single item.
             payload["media_type"] = "REELS"
             payload["video_url"] = url
+            # Trial reel: shown to non-followers first. Meta: trial_params is valid only
+            # with media_type=REELS; graduation_strategy MANUAL (graduate in the app) or
+            # SS_PERFORMANCE (Instagram graduates it if it performs well).
+            trial = content.extra.get("trial_graduation")
+            if trial:
+                payload["trial_params"] = {"graduation_strategy": trial}
         else:
             payload["image_url"] = url
 

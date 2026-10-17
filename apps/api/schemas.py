@@ -19,6 +19,7 @@ from ninja import Field, Schema
 from pydantic import field_serializer
 
 from providers import is_video_only, requires_media
+from apps.composer.trial import TRIAL_DESCRIPTION
 
 if TYPE_CHECKING:
     from apps.analytics.derive import DerivedMetric
@@ -215,6 +216,7 @@ class CreatePostRequest(Schema):
             "omitting it) leaves the post's default in place for that platform."
         ),
     )
+    instagram_trial: Literal["MANUAL", "SS_PERFORMANCE"] | None = Field(None, description=TRIAL_DESCRIPTION)
     action: PostAction = Field(
         "draft",
         description=(

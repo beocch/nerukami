@@ -48,6 +48,7 @@ from apps.composer.services import (
     usable_media_types,
 )
 from apps.social_accounts.models import SocialAccount
+from apps.composer.trial import trial_extra
 
 router = Router(tags=["posts"])
 
@@ -256,6 +257,7 @@ def create(request, payload: CreatePostRequest):
             author=request.user if not request.user.is_anonymous else None,
             status="scheduled" if payload.action == "schedule" else "draft",
             platform_overrides=platform_overrides,
+            platform_extra=trial_extra(payload.instagram_trial, social_account),
         )
         body = _post_to_response(request, post)
         status_code = 201

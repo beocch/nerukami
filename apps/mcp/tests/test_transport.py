@@ -1066,3 +1066,33 @@ class TestAnalyticsPermissionGate:
         )
         assert body["error"]["code"] == INVALID_PARAMS
         assert "view_analytics" in body["error"]["message"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Instagram trial reels — instagram_trial lands in platform_extra
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestInstagramTrial:
+    def _draft(self, client, account, trial):
+        return _post(
+            client,
+            _rpc(
+                "tools/call",
+                {
+                    "name": "create_draft",
+                    "arguments": {"social_account_id": str(account.id), "caption": "trial", "instagram_trial": trial},
+                },
+            ),
+        )
+
+    def test_trial_is_stored_for_the_publisher(self, analytics_client, instagram_account):
+        status, body = self._draft(analytics_client, instagram_account, "MANUAL")
+        assert status == 200 and "error" not in body
+        assert PlatformPost.objects.get().platform_extra == {"trial_graduation": "MANUAL"}
+
+    def test_trial_is_refused_for_non_instagram(self, analytics_client, social_account):
+        status, body = self._draft(analytics_client, social_account, "MANUAL")
+        assert body["error"]["code"] == INVALID_PARAMS
+        assert Post.objects.count() == 0

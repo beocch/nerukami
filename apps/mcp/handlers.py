@@ -39,6 +39,7 @@ from apps.inbox.services import (
 from apps.mcp.protocol import INVALID_PARAMS, JsonRpcError
 from apps.mcp.tools import Tool, register_tool
 from apps.social_accounts.models import SocialAccount
+from apps.composer.trial import TRIAL_DESCRIPTION, TRIAL_STRATEGIES, trial_extra
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -226,6 +227,9 @@ register_tool(
 # ---------------------------------------------------------------------------
 
 
+TRIAL_SCHEMA = {"type": "string", "enum": list(TRIAL_STRATEGIES), "description": TRIAL_DESCRIPTION}
+
+
 def _create_draft(args: dict, context: dict[str, Any]) -> dict:
     _require_perm(context, "create_posts")
     api_key = context["api_key"]
@@ -249,6 +253,7 @@ def _create_draft(args: dict, context: dict[str, Any]) -> dict:
             proposed_publish_at=proposed_publish_at,
             author=api_key.issued_by if api_key.issued_by_id else None,
             status="draft",
+            platform_extra=trial_extra(args.get("instagram_trial"), sa),
         )
     except ValueError as exc:
         raise JsonRpcError(INVALID_PARAMS, str(exc)) from exc
@@ -290,6 +295,7 @@ register_tool(
                     "default": [],
                     "description": "MediaAsset UUIDs already uploaded to the workspace's media library.",
                 },
+                "instagram_trial": TRIAL_SCHEMA,
                 "proposed_publish_at": {
                     "type": "string",
                     "description": (
@@ -350,6 +356,7 @@ def _schedule_post(args: dict, context: dict[str, Any]) -> dict:
             scheduled_at=scheduled_at,
             author=api_key.issued_by if api_key.issued_by_id else None,
             status="scheduled",
+            platform_extra=trial_extra(args.get("instagram_trial"), sa),
         )
     except ValueError as exc:
         raise JsonRpcError(INVALID_PARAMS, str(exc)) from exc
@@ -388,6 +395,7 @@ register_tool(
                     "items": {"type": "string", "format": "uuid"},
                     "default": [],
                 },
+                "instagram_trial": TRIAL_SCHEMA,
             },
             "required": ["social_account_id", "caption", "scheduled_at"],
             "additionalProperties": False,
