@@ -525,6 +525,9 @@ _INSTAGRAM_LOGIN_CREDENTIALS = {
 # public APP_URL), "resumable" (we push the bytes to rupload.facebook.com), or
 # "auto": resumable when the media URL is localhost/private, url otherwise.
 INSTAGRAM_VIDEO_UPLOAD = env("INSTAGRAM_VIDEO_UPLOAD", default="auto")
+# "curl": provider HTTP goes through the curl binary (providers/curl_transport.py)
+# — for networks whose DPI stalls Python's OpenSSL handshake to Meta.
+HTTP_TRANSPORT = env("HTTP_TRANSPORT", default="httpx")
 # Threads has its own app identity: a Meta app carrying the "Access the Threads
 # API" use case gets a Threads App ID / Secret distinct from the Facebook pair
 # (App settings -> Basic -> Threads App ID). Sending the Facebook App ID to

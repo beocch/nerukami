@@ -221,3 +221,4 @@ theme/static/css/dist/
 
 # nerukami installer: standalone Tailwind binary
 .tools/
+.certs/

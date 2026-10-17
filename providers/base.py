@@ -10,6 +10,7 @@ from typing import IO
 
 import httpx
 
+from .curl_transport import provider_transport
 from .exceptions import APIError, ProviderError, RateLimitError
 from .types import (
     AccountMetrics,
@@ -389,7 +390,7 @@ class SocialProvider(ABC):
         if headers:
             req_headers.update(headers)
 
-        with httpx.Client(timeout=timeout) as client:
+        with httpx.Client(timeout=timeout, transport=provider_transport()) as client:
             # httpx uses `content` for a request body, `data` for form mappings.
             # A file object or byte iterator goes to `content` too, and httpx
             # streams it rather than materializing it — which is the only way a
