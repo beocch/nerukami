@@ -518,6 +518,10 @@ _INSTAGRAM_LOGIN_CREDENTIALS = {
     "app_secret": env("PLATFORM_INSTAGRAM_APP_SECRET", default=""),
     "human_agent_enabled": env.bool("PLATFORM_INSTAGRAM_HUMAN_AGENT_ENABLED", default=False),
 }
+# How Instagram videos reach Meta: "url" (Meta downloads video_url — needs a
+# public APP_URL), "resumable" (we push the bytes to rupload.facebook.com), or
+# "auto": resumable when the media URL is localhost/private, url otherwise.
+INSTAGRAM_VIDEO_UPLOAD = env("INSTAGRAM_VIDEO_UPLOAD", default="auto")
 # Threads has its own app identity: a Meta app carrying the "Access the Threads
 # API" use case gets a Threads App ID / Secret distinct from the Facebook pair
 # (App settings -> Basic -> Threads App ID). Sending the Facebook App ID to

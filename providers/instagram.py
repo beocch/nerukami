@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 from .base import SocialProvider
 from .exceptions import APIError, MessagingError, OAuthError, ProviderError, PublishError, WebhookChannelError
+from .instagram_video_upload import apply_video_source, upload_video, wants_local_media
 from .meta_accounts import fetch_me_accounts, page_can_publish
 from .meta_comments import (
     fetch_instagram_comments,
@@ -50,7 +51,8 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://graph.facebook.com/v25.0"
+API_VERSION = "v25.0"
+BASE_URL = f"https://graph.facebook.com/{API_VERSION}"
 OAUTH_URL = "https://www.facebook.com/v25.0/dialog/oauth"
 TOKEN_URL = f"{BASE_URL}/oauth/access_token"
 # Subscribed on the Instagram user, NOT on the linked Facebook Page. These are
@@ -98,10 +100,11 @@ CONTAINER_POLL_MAX_ATTEMPTS = 60
 class InstagramProvider(SocialProvider):
     """Instagram Graph API provider (via Facebook Graph API v25.0)."""
 
-    # Publishes from hosted URLs only — the platform fetches the media
-    # itself, so ``PublishContent.media_files`` is never read and the engine
-    # can skip downloading the asset to local disk entirely.
-    needs_local_media = False
+    @property
+    def needs_local_media(self) -> bool:
+        # Hosted URLs need no local copy; a resumable video upload (localhost
+        # Studio, see instagram_video_upload) reads ``media_files``.
+        return wants_local_media()
 
     def __init__(self, credentials: dict | None = None):
         creds = dict(credentials or {})
@@ -352,9 +355,13 @@ class InstagramProvider(SocialProvider):
         url = content.media_urls[0]
         is_video = content.is_video(0)
 
+        upload_from: str | None = None
         if content.post_type == PostType.STORY:
             payload["media_type"] = "STORIES"
-            payload["video_url" if is_video else "image_url"] = url
+            if is_video:
+                upload_from = apply_video_source(payload, content, 0)
+            else:
+                payload["image_url"] = url
         elif is_video or content.post_type in (PostType.REEL, PostType.VIDEO):
             # Instagram has no standalone feed video: a single video is
             # published as a Reel. This also catches a lone video that arrived
@@ -362,7 +369,7 @@ class InstagramProvider(SocialProvider):
             # fallback for one video asset) or a CAROUSEL that ended up with a
             # single item.
             payload["media_type"] = "REELS"
-            payload["video_url"] = url
+            upload_from = apply_video_source(payload, content, 0)
             # Trial reel: shown to non-followers first. Meta: trial_params is valid only
             # with media_type=REELS; graduation_strategy MANUAL (graduate in the app) or
             # SS_PERFORMANCE (Instagram graduates it if it performs well).
@@ -373,7 +380,7 @@ class InstagramProvider(SocialProvider):
             payload["image_url"] = url
 
         # Step 1: create container
-        container_id = self._create_container(access_token, ig_user_id, payload)
+        container_id = self._create_container(access_token, ig_user_id, payload, upload_from=upload_from)
 
         # Step 2: wait for container to be ready
         self._wait_for_container(access_token, container_id)
@@ -391,11 +398,12 @@ class InstagramProvider(SocialProvider):
             }
             if content.is_video(index):
                 child_payload["media_type"] = "VIDEO"
-                child_payload["video_url"] = url
+                upload_from = apply_video_source(child_payload, content, index)
             else:
                 child_payload["image_url"] = url
+                upload_from = None
 
-            child_id = self._create_container(access_token, ig_user_id, child_payload)
+            child_id = self._create_container(access_token, ig_user_id, child_payload, upload_from=upload_from)
             self._wait_for_container(access_token, child_id)
             child_ids.append(child_id)
 
@@ -412,7 +420,9 @@ class InstagramProvider(SocialProvider):
 
         return self._publish_container(access_token, ig_user_id, carousel_id)
 
-    def _create_container(self, access_token: str, ig_user_id: str, payload: dict) -> str:
+    def _create_container(
+        self, access_token: str, ig_user_id: str, payload: dict, upload_from: str | None = None
+    ) -> str:
         resp = self._request(
             "POST",
             f"{BASE_URL}/{ig_user_id}/media",
@@ -427,6 +437,8 @@ class InstagramProvider(SocialProvider):
                 platform=self.platform_name,
                 raw_response=data,
             )
+        if upload_from:
+            upload_video(self, access_token, container_id, data.get("uri"), upload_from, API_VERSION)
         return container_id
 
     def _wait_for_container(self, access_token: str, container_id: str) -> None:
