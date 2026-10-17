@@ -105,6 +105,8 @@ class InstagramTrialComposerTests(AccountScopeTestsBase):
         _token, content = provider.publish_post.call_args.args
         self.assertEqual(content.extra["trial_graduation"], "MANUAL")
 
+        # Instagram (Direct) only takes a public video_url; the test media URL is local.
+        content.media_urls = ["https://cdn.example.com/reel.mp4"]
         real = InstagramLoginProvider()
         real._create_container = MagicMock(return_value="c1")
         real._wait_for_container = MagicMock()

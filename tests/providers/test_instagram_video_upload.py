@@ -66,7 +66,6 @@ def _reel(video_path, url=LOCAL_URL, extra=None):
 @pytest.mark.parametrize(
     ("provider_cls", "create_url"),
     [
-        (InstagramLoginProvider, "https://graph.instagram.com/v25.0/me/media"),
         (InstagramProvider, "https://graph.facebook.com/v25.0/1784/media"),
     ],
 )
@@ -97,7 +96,7 @@ def test_upload_url_falls_back_when_meta_returns_no_uri(settings, video):
 
 def test_upload_ignores_a_uri_off_metas_upload_host(settings, video):
     settings.INSTAGRAM_VIDEO_UPLOAD = "resumable"
-    req = _publish(InstagramLoginProvider(), _reel(video), create={"id": "c1", "uri": "https://evil.example/x"})
+    req = _publish(InstagramProvider(), _reel(video), create={"id": "c1", "uri": "https://evil.example/x"})
     assert not _calls(req, lambda url: url.startswith("https://evil"))
     assert _calls(req, lambda url: "rupload" in url)[0].args[1] == RUPLOAD
 
@@ -105,15 +104,15 @@ def test_upload_ignores_a_uri_off_metas_upload_host(settings, video):
 def test_failed_upload_raises(settings, video):
     settings.INSTAGRAM_VIDEO_UPLOAD = "resumable"
     with pytest.raises(PublishError):
-        _publish(InstagramLoginProvider(), _reel(video), upload={"success": False, "debug_info": {}})
+        _publish(InstagramProvider(), _reel(video), upload={"success": False, "debug_info": {}})
 
 
 def test_auto_mode_uploads_local_media_and_links_public_media(settings, video):
     settings.INSTAGRAM_VIDEO_UPLOAD = "auto"
-    req = _publish(InstagramLoginProvider(), _reel(video, url=LOCAL_URL))
+    req = _publish(InstagramProvider(), _reel(video, url=LOCAL_URL))
     assert _calls(req, lambda url: url.endswith("/media"))[0].kwargs["json"]["upload_type"] == "resumable"
 
-    req = _publish(InstagramLoginProvider(), _reel(video, url=PUBLIC_URL, extra={"trial_graduation": "MANUAL"}))
+    req = _publish(InstagramProvider(), _reel(video, url=PUBLIC_URL, extra={"trial_graduation": "MANUAL"}))
     payload = _calls(req, lambda url: url.endswith("/media"))[0].kwargs["json"]
     assert payload["video_url"] == PUBLIC_URL
     assert "upload_type" not in payload
@@ -132,7 +131,7 @@ def test_resumable_without_local_file_falls_back_to_video_url(settings):
     settings.INSTAGRAM_VIDEO_UPLOAD = "resumable"
     content = _reel(None)
     content.media_files = []
-    req = _publish(InstagramLoginProvider(), content)
+    req = _publish(InstagramProvider(), content)
     assert _calls(req, lambda url: url.endswith("/media"))[0].kwargs["json"]["video_url"] == LOCAL_URL
 
 
@@ -146,7 +145,7 @@ def test_carousel_uploads_video_children_and_links_images(settings, video):
         post_type=PostType.CAROUSEL,
         extra={"ig_user_id": "1784"},
     )
-    req = _publish(InstagramLoginProvider(), content)
+    req = _publish(InstagramProvider(), content)
     image_child, video_child, carousel = (c.kwargs["json"] for c in _calls(req, lambda url: url.endswith("/media")))
     assert image_child == {"is_carousel_item": True, "image_url": "http://127.0.0.1:8000/media/a.jpg"}
     assert video_child == {"is_carousel_item": True, "media_type": "VIDEO", "upload_type": "resumable"}
@@ -168,5 +167,24 @@ def test_carousel_uploads_video_children_and_links_images(settings, video):
 def test_engine_downloads_media_only_when_uploading(settings, mode, app_url, expected):
     settings.INSTAGRAM_VIDEO_UPLOAD = mode
     settings.APP_URL = app_url
-    assert InstagramLoginProvider().needs_local_media is expected
     assert InstagramProvider().needs_local_media is expected
+    assert InstagramLoginProvider().needs_local_media is False
+
+
+# graph.instagram.com has no resumable upload: Meta answers "The parameter
+# video_url is required" to upload_type=resumable (checked live 2026-10-17).
+@pytest.mark.parametrize("mode", ["auto", "resumable", "url"])
+def test_instagram_login_always_sends_video_url(settings, video, mode):
+    settings.INSTAGRAM_VIDEO_UPLOAD = mode
+    req = _publish(InstagramLoginProvider(), _reel(video, url=PUBLIC_URL, extra={"trial_graduation": "MANUAL"}))
+    payload = _calls(req, lambda url: url.endswith("/media"))[0].kwargs["json"]
+    assert payload["video_url"] == PUBLIC_URL
+    assert "upload_type" not in payload
+    assert payload["trial_params"] == {"graduation_strategy": "MANUAL"}
+    assert not _calls(req, lambda url: "rupload" in url)
+
+
+def test_instagram_login_private_video_url_fails_with_clear_error(settings, video):
+    settings.INSTAGRAM_VIDEO_UPLOAD = "auto"
+    with pytest.raises(PublishError, match="public URL"):
+        _publish(InstagramLoginProvider(), _reel(video, url=LOCAL_URL))

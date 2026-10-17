@@ -59,13 +59,26 @@ def wants_local_media() -> bool:
     return mode == "resumable"
 
 
-def apply_video_source(payload: dict, content, index: int) -> str | None:
+def apply_video_source(payload: dict, content, index: int, *, resumable: bool = True) -> str | None:
     """Point a video container at its bytes; return the local file to upload, if any.
 
     Sets ``video_url`` (URL mode) or ``upload_type=resumable`` on ``payload``.
     Falls back to ``video_url`` when no local file was handed over.
+    ``resumable=False`` is for hosts without resumable upload (graph.instagram.com
+    answers "The parameter video_url is required"): a URL Meta can't reach then
+    fails here with a clear message instead of at Meta.
     """
     url = content.media_urls[index]
+    if not resumable:
+        if is_private_url(url):
+            raise PublishError(
+                "Instagram (Direct) accepts video only by a public URL, and this Studio's media URL "
+                f"({urlparse(url).hostname}) is not reachable from the internet. Set a public APP_URL "
+                "(server or tunnel) or connect the account via Instagram (Facebook Login), which "
+                "supports direct upload."
+            )
+        payload["video_url"] = url
+        return None
     mode = video_upload_mode()
     use_resumable = mode == "resumable" or (mode == "auto" and is_private_url(url))
     files = content.media_files or []

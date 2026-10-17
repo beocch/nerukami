@@ -20,7 +20,7 @@ from urllib.parse import urlencode
 
 from .base import SocialProvider
 from .exceptions import APIError, OAuthError, ProviderError, PublishError
-from .instagram_video_upload import apply_video_source, upload_video, wants_local_media
+from .instagram_video_upload import apply_video_source, upload_video
 from .meta_comments import (
     fetch_instagram_comments,
     find_own_instagram_comment,
@@ -99,11 +99,9 @@ class InstagramLoginProvider(SocialProvider):
     directly through Instagram, without requiring a linked Facebook Page.
     """
 
-    @property
-    def needs_local_media(self) -> bool:
-        # Hosted URLs need no local copy; a resumable video upload (localhost
-        # Studio, see instagram_video_upload) reads ``media_files``.
-        return wants_local_media()
+    # graph.instagram.com has no resumable upload (it answers "The parameter
+    # video_url is required"), so videos always go out as hosted URLs.
+    needs_local_media = False
 
     def __init__(self, credentials: dict | None = None):
         creds = dict(credentials or {})
@@ -338,7 +336,7 @@ class InstagramLoginProvider(SocialProvider):
         if content.post_type == PostType.STORY:
             payload["media_type"] = "STORIES"
             if is_video:
-                upload_from = apply_video_source(payload, content, 0)
+                upload_from = apply_video_source(payload, content, 0, resumable=False)
             else:
                 payload["image_url"] = url
         elif is_video or content.post_type in (PostType.REEL, PostType.VIDEO):
@@ -348,7 +346,7 @@ class InstagramLoginProvider(SocialProvider):
             # fallback for one video asset) or a CAROUSEL that ended up with a
             # single item.
             payload["media_type"] = "REELS"
-            upload_from = apply_video_source(payload, content, 0)
+            upload_from = apply_video_source(payload, content, 0, resumable=False)
             # Trial reel: shown to non-followers first. Meta: trial_params is valid only
             # with media_type=REELS; graduation_strategy MANUAL (graduate in the app) or
             # SS_PERFORMANCE (Instagram graduates it if it performs well).
@@ -369,7 +367,7 @@ class InstagramLoginProvider(SocialProvider):
             child_payload: dict = {"is_carousel_item": True}
             if content.is_video(index):
                 child_payload["media_type"] = "VIDEO"
-                upload_from = apply_video_source(child_payload, content, index)
+                upload_from = apply_video_source(child_payload, content, index, resumable=False)
             else:
                 child_payload["image_url"] = url
                 upload_from = None

@@ -21,7 +21,11 @@ def _container_payload(provider, content):
 
 def _reel(extra):
     return PublishContent(
-        text="hi", media_urls=["https://x/v.mp4"], media_types=["video"], post_type=PostType.REEL, extra=extra
+        text="hi",
+        media_urls=["https://cdn.example.com/v.mp4"],
+        media_types=["video"],
+        post_type=PostType.REEL,
+        extra=extra,
     )
 
 
