@@ -61,6 +61,7 @@ from .services import (
     usable_media_types,
 )
 from .status import READONLY_STATUSES, derive_post_status
+from .trial import INSTAGRAM_PLATFORMS, trial_extra
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +292,17 @@ def _sync_platform_posts(request, post, workspace, initial_status=None):
                 # Facebook's video endpoint. Choosing regular video therefore
                 # clears the hint rather than recording it.
                 extra.pop("post_type", None)
+            pp.platform_extra = extra
+
+        elif account.platform in INSTAGRAM_PLATFORMS and f"instagram_panel_{acc_id}" in request.POST:
+            # Gated on the panel's hidden marker like Facebook above, so a
+            # non-composer save never wipes a trial choice made elsewhere (MCP/API).
+            extra = {**(pp.platform_extra or {})}
+            extra.pop("trial_graduation", None)
+            try:
+                extra.update(trial_extra(request.POST.get(f"instagram_trial_{acc_id}", "").strip(), account))
+            except ValueError:
+                pass  # unknown strategy → trial off, like TikTok's invalid privacy level
             pp.platform_extra = extra
 
         elif account.platform == "youtube":

@@ -595,6 +595,31 @@
                     </div>
                 </template>
 
+                <!-- Instagram trial reel (shown to non-followers first) -->
+                <template x-for="accId in selectedAccounts" :key="'instagram-trial-settings-' + accId">
+                    <div x-show="['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)"
+                         class="border border-stone-200 rounded-xl bg-white p-4 space-y-3">
+                        <input type="hidden" :name="'instagram_panel_' + accId" value="1"
+                               :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)">
+                        <div class="flex items-center gap-2">
+                            <span class="platform-icon w-5 h-5 rounded-[5px] flex items-center justify-center pi-instagram"
+                                  x-html="platformIconSvg('instagram')"></span>
+                            <span class="text-xs font-semibold text-stone-600" x-text="charLimits[accId]?.name + ' - Reel Settings'"></span>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-1">Trial reel</label>
+                            <select :name="'instagram_trial_' + accId"
+                                    :disabled="!['instagram', 'instagram_login'].includes(charLimits[accId]?.platform)"
+                                    class="w-full text-sm px-3 py-2 rounded-lg border border-stone-200 bg-white outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all">
+                                <option value="" :selected="!platformExtras[accId]?.trial_graduation">Off</option>
+                                <option value="MANUAL" :selected="platformExtras[accId]?.trial_graduation === 'MANUAL'">Manual (stays trial until you share it to followers in the Instagram app)</option>
+                                <option value="SS_PERFORMANCE" :selected="platformExtras[accId]?.trial_graduation === 'SS_PERFORMANCE'">Auto (Instagram shares it to followers if it performs well)</option>
+                            </select>
+                            <p class="text-[11px] text-stone-400 mt-1">Reels only; shown to non-followers first.</p>
+                        </div>
+                    </div>
+                </template>
+
                 <!-- Pinterest settings (auto-visible when any Pinterest account is selected) -->
                 <template x-for="accId in selectedAccounts" :key="'pin-settings-' + accId">
                     <div x-show="charLimits[accId]?.platform === 'pinterest'"
